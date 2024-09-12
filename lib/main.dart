@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:flutter_wallpaper_manager/flutter_wallpaper_manager.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_downloader/image_downloader.dart';
-
+import 'package:wallpaper/wallpaper.dart'; // For setting wallpaper
 
 // Pexels API Key
 const String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';
@@ -157,13 +156,13 @@ class FullScreenImage extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.download),
             onPressed: () {
-              downloadImage(context, url);  // Pass context here
+              downloadImage(context, url);  // Download Image
             },
           ),
           IconButton(
             icon: Icon(Icons.wallpaper),
             onPressed: () {
-              setWallpaper(context, url);  // Pass context here
+              setWallpaper(context, url);  // Set as Wallpaper
             },
           ),
         ],
@@ -185,15 +184,27 @@ class FullScreenImage extends StatelessWidget {
     }
   }
 
-  // Set the image as wallpaper
+  // Set the image as wallpaper using the `wallpaper` package
   Future<void> setWallpaper(BuildContext context, String url) async {
     try {
-      var file = await ImageDownloader.downloadImage(url);
-      if (file != null) {
-        int location = WallpaperManager.HOME_SCREEN;
-        await WallpaperManager.setWallpaperFromFile(file, location);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Wallpaper Set')));
+      // First, download the image
+      String? imageId = await ImageDownloader.downloadImage(url);
+      if (imageId == null) {
+        throw Exception("Image download failed");
+      }
+
+      // Retrieve the path of the downloaded image
+      var imagePath = await ImageDownloader.findPath(imageId);
+      if (imagePath != null) {
+        // Set wallpaper using the local file path
+        String result = await Wallpaper.homeScreen(
+          wallpaper: imagePath,
+        );
+        if (result == 'Wallpaper set') {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Wallpaper Set Successfully'),
+          ));
+        }
       }
     } catch (e) {
       print('Failed to set wallpaper: $e');
