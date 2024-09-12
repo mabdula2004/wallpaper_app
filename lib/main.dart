@@ -3,7 +3,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_downloader/image_downloader.dart';
-import 'package:wallpaper/wallpaper.dart'; // For setting wallpaper
+import 'package:wallpaper/wallpaper.dart';  // For setting wallpaper
 
 // Pexels API Key
 const String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';
@@ -197,9 +197,7 @@ class FullScreenImage extends StatelessWidget {
       var imagePath = await ImageDownloader.findPath(imageId);
       if (imagePath != null) {
         // Set wallpaper using the local file path
-        String result = await Wallpaper.homeScreen(
-          wallpaper: imagePath,
-        );
+        String result = await Wallpaper.homeScreen(imagePath);
         if (result == 'Wallpaper set') {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Wallpaper Set Successfully'),
