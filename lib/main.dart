@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -90,7 +89,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => WallpaperCarousel(category: category['query']!),
+                    builder: (context) => WallpaperGrid(category: category['query']!),
                   ),
                 );
               },
@@ -103,11 +102,14 @@ class _CategoryScreenState extends State<CategoryScreen> {
                       style: TextStyle(color: Colors.white, fontSize: 20),
                     ),
                   ),
-                  Image.network(
-                    imageUrl,
-                    height: 150,  // Adjust the height of the image here
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10), // Add rounded corners to the image
+                    child: Image.network(
+                      imageUrl,
+                      height: 150,  // Adjust the height of the image here
+                      width: double.infinity,
+                      fit: BoxFit.cover,  // Ensures the image fits the container
+                    ),
                   ),
                   SizedBox(height: 10),
                 ],
@@ -120,15 +122,15 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 }
 
-class WallpaperCarousel extends StatefulWidget {
+class WallpaperGrid extends StatefulWidget {
   final String category;
-  WallpaperCarousel({required this.category});
+  WallpaperGrid({required this.category});
 
   @override
-  _WallpaperCarouselState createState() => _WallpaperCarouselState();
+  _WallpaperGridState createState() => _WallpaperGridState();
 }
 
-class _WallpaperCarouselState extends State<WallpaperCarousel> {
+class _WallpaperGridState extends State<WallpaperGrid> {
   List<String> imageUrls = [];
   bool isLoading = true;
   bool hasError = false;
@@ -141,7 +143,7 @@ class _WallpaperCarouselState extends State<WallpaperCarousel> {
   }
 
   Future<void> fetchImages() async {
-    final String apiUrl = 'https://api.pexels.com/v1/search?query=${widget.category}&per_page=10';
+    final String apiUrl = 'https://api.pexels.com/v1/search?query=${widget.category}&per_page=20';
 
     try {
       final response = await http.get(Uri.parse(apiUrl), headers: {
@@ -182,19 +184,26 @@ class _WallpaperCarouselState extends State<WallpaperCarousel> {
           style: TextStyle(color: Colors.white),
         ),
       )
-          : CarouselSlider(
-        options: CarouselOptions(height: 400.0, autoPlay: true),
-        items: imageUrls.map((url) {
-          return Builder(
-            builder: (BuildContext context) {
-              return Container(
-                width: MediaQuery.of(context).size.width,
-                margin: EdgeInsets.symmetric(horizontal: 5.0),
-                child: Image.network(url, fit: BoxFit.cover),
-              );
-            },
-          );
-        }).toList(),
+          : Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2, // 2 images per row
+            crossAxisSpacing: 10, // Horizontal spacing between images
+            mainAxisSpacing: 10,  // Vertical spacing between images
+            childAspectRatio: 0.75, // Adjust this to control image height
+          ),
+          itemCount: imageUrls.length,
+          itemBuilder: (context, index) {
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(10), // Rounded corners
+              child: Image.network(
+                imageUrls[index],
+                fit: BoxFit.cover,  // Ensures the image fits within the container
+              ),
+            );
+          },
+        ),
       ),
     );
   }
