@@ -2,19 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:image_downloader/image_downloader.dart';
-import 'package:wallpaper/wallpaper.dart';  // For setting wallpaper
-
-// Pexels API Key
-const String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';
-const String pexelsBaseUrl = 'https://api.pexels.com/v1/search';
-const Map<String, String> categories = {
-  'Nature': 'nature',
-  'Abstract': 'abstract',
-  'Animals': 'animals',
-  'City': 'city',
-  'Cars': 'cars',
-};
 
 void main() {
   runApp(WallpaperApp());
@@ -25,187 +12,112 @@ class WallpaperApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Wallpaper App',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: WallpaperHomePage(),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: CategoryScreen(),
     );
   }
 }
 
-class WallpaperHomePage extends StatefulWidget {
+class CategoryScreen extends StatelessWidget {
+  final List<String> categories = ['Nature', 'Cars', 'Animals', 'Cities'];
+
   @override
-  _WallpaperHomePageState createState() => _WallpaperHomePageState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Wallpaper Categories')),
+      body: ListView.builder(
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          return ListTile(
+            title: Text(categories[index]),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WallpaperCarousel(category: categories[index]),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
 }
 
-class _WallpaperHomePageState extends State<WallpaperHomePage> {
-  String selectedCategory = 'Nature'; // Default category
+class WallpaperCarousel extends StatefulWidget {
+  final String category;
+  WallpaperCarousel({required this.category});
+
+  @override
+  _WallpaperCarouselState createState() => _WallpaperCarouselState();
+}
+
+class _WallpaperCarouselState extends State<WallpaperCarousel> {
   List<String> imageUrls = [];
   bool isLoading = true;
+  bool hasError = false;
 
   @override
   void initState() {
     super.initState();
-    fetchWallpapers(); // Fetch default category wallpapers
+    fetchImages();
   }
 
-  // Fetch Wallpapers from Pexels based on category
-  Future<void> fetchWallpapers() async {
-    setState(() {
-      isLoading = true;
-    });
-    final String url = '$pexelsBaseUrl?query=$selectedCategory&per_page=15';
+  Future<void> fetchImages() async {
+    final String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';  // Your Pexels API key
+    final String category = widget.category;
+    final String apiUrl = 'https://api.pexels.com/v1/search?query=$category&per_page=10';
+
     try {
-      final response = await http.get(Uri.parse(url), headers: {
-        'Authorization': apiKey,
-      });
+      final response = await http.get(
+        Uri.parse(apiUrl),
+        headers: {
+          'Authorization': apiKey,  // Add API key in headers
+        },
+      );
       if (response.statusCode == 200) {
-        Map<String, dynamic> data = json.decode(response.body);
+        final data = json.decode(response.body);
         setState(() {
-          imageUrls = (data['photos'] as List)
-              .map((item) => item['src']['large2x'] as String)
-              .toList();
+          imageUrls = List<String>.from(data['photos'].map((photo) => photo['src']['medium']));
           isLoading = false;
         });
       } else {
-        throw Exception('Failed to load images');
+        throw Exception('Failed to load wallpapers');
       }
     } catch (e) {
-      print(e);
       setState(() {
         isLoading = false;
+        hasError = true;
+        print('Error fetching images: $e');
       });
     }
   }
 
-  // Handle category change
-  void onCategoryChange(String? category) {
-    setState(() {
-      selectedCategory = category!;
-    });
-    fetchWallpapers(); // Fetch wallpapers for the selected category
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Wallpaper App')),
-      body: Column(
-        children: [
-          // Category Dropdown
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: DropdownButton<String>(
-              value: selectedCategory,
-              items: categories.keys
-                  .map((String category) => DropdownMenuItem<String>(
-                value: category,
-                child: Text(category),
-              ))
-                  .toList(),
-              onChanged: onCategoryChange,
-            ),
-          ),
-          Expanded(
-            child: isLoading
-                ? Center(child: CircularProgressIndicator())
-                : Column(
-              children: [
-                // Carousel Slider
-                CarouselSlider(
-                  options: CarouselOptions(
-                    height: 400.0,
-                    enlargeCenterPage: true,
-                    autoPlay: true,
-                  ),
-                  items: imageUrls.map((url) {
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                FullScreenImage(url: url),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        margin: EdgeInsets.symmetric(horizontal: 5.0),
-                        child: Image.network(url, fit: BoxFit.cover),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
+      appBar: AppBar(title: Text('${widget.category} Wallpapers')),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : hasError
+          ? Center(child: Text('Error loading wallpapers. Please try again later.'))
+          : CarouselSlider(
+        options: CarouselOptions(height: 400.0, autoPlay: true),
+        items: imageUrls.map((url) {
+          return Builder(
+            builder: (BuildContext context) {
+              return Container(
+                width: MediaQuery.of(context).size.width,
+                margin: EdgeInsets.symmetric(horizontal: 5.0),
+                child: Image.network(url, fit: BoxFit.cover),
+              );
+            },
+          );
+        }).toList(),
       ),
     );
-  }
-}
-
-class FullScreenImage extends StatelessWidget {
-  final String url;
-  FullScreenImage({required this.url});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Wallpaper View'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.download),
-            onPressed: () {
-              downloadImage(context, url);  // Download Image
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.wallpaper),
-            onPressed: () {
-              setWallpaper(context, url);  // Set as Wallpaper
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Image.network(url, fit: BoxFit.cover, width: double.infinity),
-      ),
-    );
-  }
-
-  // Download the image
-  Future<void> downloadImage(BuildContext context, String url) async {
-    try {
-      await ImageDownloader.downloadImage(url);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Image Downloaded')));
-    } catch (e) {
-      print('Failed to download image: $e');
-    }
-  }
-
-  // Set the image as wallpaper using the `wallpaper` package
-  Future<void> setWallpaper(BuildContext context, String url) async {
-    try {
-      // First, download the image
-      String? imageId = await ImageDownloader.downloadImage(url);
-      if (imageId == null) {
-        throw Exception("Image download failed");
-      }
-
-      // Retrieve the path of the downloaded image
-      var imagePath = await ImageDownloader.findPath(imageId);
-      if (imagePath != null) {
-        // Set wallpaper using the local file path
-        String result = await Wallpaper.homeScreen(imagePath);
-        if (result == 'Wallpaper set') {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Wallpaper Set Successfully'),
-          ));
-        }
-      }
-    } catch (e) {
-      print('Failed to set wallpaper: $e');
-    }
   }
 }

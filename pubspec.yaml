@@ -37,9 +37,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^0.13.4 # For making API calls
   carousel_slider: ^5.0.0 # For image carousels
-  image_downloader: ^0.31.0 # For downloading images
-  flutter_wallpaper_manager: ^0.0.4
-  wallpaper: ^1.1.3
+
+
 
 
 dev_dependencies:
