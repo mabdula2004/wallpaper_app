@@ -12,34 +12,107 @@ class WallpaperApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Wallpaper App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: ThemeData.dark(), // Apply dark theme
       home: CategoryScreen(),
     );
   }
 }
 
-class CategoryScreen extends StatelessWidget {
-  final List<String> categories = ['Nature', 'Cars', 'Animals', 'Cities'];
+class CategoryScreen extends StatefulWidget {
+  @override
+  _CategoryScreenState createState() => _CategoryScreenState();
+}
+
+class _CategoryScreenState extends State<CategoryScreen> {
+  final String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';  // Pexels API key
+  final List<Map<String, String>> categories = [
+    {'name': 'Nature', 'query': 'nature'},
+    {'name': 'Cars', 'query': 'cars'},
+    {'name': 'Animals', 'query': 'animals'},
+    {'name': 'Cities', 'query': 'city'},
+  ];
+
+  Map<String, String> categoryImages = {}; // Store category images
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchCategoryImages();  // Fetch category images on app start
+  }
+
+  Future<void> fetchCategoryImages() async {
+    for (var category in categories) {
+      final String query = category['query']!;
+      final String apiUrl = 'https://api.pexels.com/v1/search?query=$query&per_page=1';
+
+      try {
+        final response = await http.get(Uri.parse(apiUrl), headers: {
+          'Authorization': apiKey,
+        });
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          setState(() {
+            categoryImages[query] = data['photos'][0]['src']['medium'];
+          });
+        }
+      } catch (e) {
+        print('Error fetching image for $query: $e');
+      }
+    }
+    setState(() {
+      isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Wallpaper Categories')),
-      body: ListView.builder(
+      appBar: AppBar(
+        title: Text('Wallpaper Categories'),
+        backgroundColor: Colors.black, // Black app bar
+      ),
+      backgroundColor: Colors.black, // Black background
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : ListView.builder(
         itemCount: categories.length,
         itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(categories[index]),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WallpaperCarousel(category: categories[index]),
-                ),
-              );
-            },
+          final category = categories[index];
+          final imageUrl = categoryImages[category['query']!] ??
+              'https://via.placeholder.com/150';  // Default image if loading
+
+          return Card(
+            color: Colors.grey[900],
+            margin: EdgeInsets.all(10),
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WallpaperCarousel(category: category['query']!),
+                  ),
+                );
+              },
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(
+                      category['name']!,
+                      style: TextStyle(color: Colors.white, fontSize: 20),
+                    ),
+                  ),
+                  Image.network(
+                    imageUrl,
+                    height: 150,  // Adjust the height of the image here
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                  SizedBox(height: 10),
+                ],
+              ),
+            ),
           );
         },
       ),
@@ -59,6 +132,7 @@ class _WallpaperCarouselState extends State<WallpaperCarousel> {
   List<String> imageUrls = [];
   bool isLoading = true;
   bool hasError = false;
+  final String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';  // Pexels API key
 
   @override
   void initState() {
@@ -67,17 +141,12 @@ class _WallpaperCarouselState extends State<WallpaperCarousel> {
   }
 
   Future<void> fetchImages() async {
-    final String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';  // Your Pexels API key
-    final String category = widget.category;
-    final String apiUrl = 'https://api.pexels.com/v1/search?query=$category&per_page=10';
+    final String apiUrl = 'https://api.pexels.com/v1/search?query=${widget.category}&per_page=10';
 
     try {
-      final response = await http.get(
-        Uri.parse(apiUrl),
-        headers: {
-          'Authorization': apiKey,  // Add API key in headers
-        },
-      );
+      final response = await http.get(Uri.parse(apiUrl), headers: {
+        'Authorization': apiKey,
+      });
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
@@ -99,11 +168,20 @@ class _WallpaperCarouselState extends State<WallpaperCarousel> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.category} Wallpapers')),
+      appBar: AppBar(
+        title: Text('${widget.category} Wallpapers'),
+        backgroundColor: Colors.black,
+      ),
+      backgroundColor: Colors.black,
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : hasError
-          ? Center(child: Text('Error loading wallpapers. Please try again later.'))
+          ? Center(
+        child: Text(
+          'Error loading wallpapers. Please try again later.',
+          style: TextStyle(color: Colors.white),
+        ),
+      )
           : CarouselSlider(
         options: CarouselOptions(height: 400.0, autoPlay: true),
         items: imageUrls.map((url) {
