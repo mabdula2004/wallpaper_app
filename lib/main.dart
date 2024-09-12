@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter_wallpaper_manager/flutter_wallpaper_manager.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:image_downloader/image_downloader.dart';
-import 'package:wallpaper_manager_flutter/wallpaper_manager_flutter.dart';
+
 
 // Pexels API Key
 const String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';
@@ -52,8 +53,7 @@ class _WallpaperHomePageState extends State<WallpaperHomePage> {
     setState(() {
       isLoading = true;
     });
-    final String url =
-        '$pexelsBaseUrl?query=$selectedCategory&per_page=15';
+    final String url = '$pexelsBaseUrl?query=$selectedCategory&per_page=15';
     try {
       final response = await http.get(Uri.parse(url), headers: {
         'Authorization': apiKey,
@@ -157,13 +157,13 @@ class FullScreenImage extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.download),
             onPressed: () {
-              downloadImage(url);
+              downloadImage(context, url);  // Pass context here
             },
           ),
           IconButton(
             icon: Icon(Icons.wallpaper),
             onPressed: () {
-              setWallpaper(url);
+              setWallpaper(context, url);  // Pass context here
             },
           ),
         ],
@@ -175,7 +175,7 @@ class FullScreenImage extends StatelessWidget {
   }
 
   // Download the image
-  Future<void> downloadImage(String url) async {
+  Future<void> downloadImage(BuildContext context, String url) async {
     try {
       await ImageDownloader.downloadImage(url);
       ScaffoldMessenger.of(context)
@@ -186,13 +186,15 @@ class FullScreenImage extends StatelessWidget {
   }
 
   // Set the image as wallpaper
-  Future<void> setWallpaper(String url) async {
+  Future<void> setWallpaper(BuildContext context, String url) async {
     try {
-      int location = WallpaperManagerFlutter.HOME_SCREEN;
       var file = await ImageDownloader.downloadImage(url);
-      await WallpaperManagerFlutter().setWallpaperFromFile(file!, location);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Wallpaper Set')));
+      if (file != null) {
+        int location = WallpaperManager.HOME_SCREEN;
+        await WallpaperManager.setWallpaperFromFile(file, location);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Wallpaper Set')));
+      }
     } catch (e) {
       print('Failed to set wallpaper: $e');
     }
