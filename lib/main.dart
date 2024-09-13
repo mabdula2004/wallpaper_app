@@ -5,7 +5,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
 import 'dart:io';
 
-
 void main() {
   runApp(WallpaperApp());
 }
@@ -173,19 +172,27 @@ class _WallpaperGridState extends State<WallpaperGrid> {
   }
 
   Future<void> downloadImage(String url) async {
+    // Request storage permissions
     if (await Permission.storage.request().isGranted) {
       try {
-        var response = await http.get(Uri.parse(url));
-        var dir = await getExternalStorageDirectory();
-        File file = File('${dir?.path}/${url.split('/').last}');
+        // Get the internal directory to save the file
+        Directory directory = await getApplicationDocumentsDirectory();
+        String fileName = url.split('/').last;
+        String filePath = '${directory.path}/$fileName';
 
+        // Fetch the image from the URL
+        var response = await http.get(Uri.parse(url));
+
+        // Save the image as a file
+        File file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
 
+        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Downloaded to ${file.path}')),
+          SnackBar(content: Text('Downloaded to $filePath')),
         );
       } catch (e) {
-        print(e);
+        print('Error downloading image: $e');
       }
     } else {
       print('Storage permission denied');
