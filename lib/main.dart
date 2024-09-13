@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
+import 'dart:io';
+
 
 void main() {
   runApp(WallpaperApp());
@@ -10,8 +14,9 @@ class WallpaperApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Wallpaper App',
-      theme: ThemeData.dark(), // Apply dark theme
+      theme: ThemeData.dark(),
       home: CategoryScreen(),
     );
   }
@@ -23,7 +28,7 @@ class CategoryScreen extends StatefulWidget {
 }
 
 class _CategoryScreenState extends State<CategoryScreen> {
-  final String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';  // Pexels API key
+  final String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';
   final List<Map<String, String>> categories = [
     {'name': 'Nature', 'query': 'nature'},
     {'name': 'Cars', 'query': 'cars'},
@@ -31,13 +36,13 @@ class _CategoryScreenState extends State<CategoryScreen> {
     {'name': 'Cities', 'query': 'city'},
   ];
 
-  Map<String, String> categoryImages = {}; // Store category images
+  Map<String, String> categoryImages = {};
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchCategoryImages();  // Fetch category images on app start
+    fetchCategoryImages();
   }
 
   Future<void> fetchCategoryImages() async {
@@ -69,9 +74,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Wallpaper Categories'),
-        backgroundColor: Colors.black, // Black app bar
+        backgroundColor: Colors.black,
       ),
-      backgroundColor: Colors.black, // Black background
+      backgroundColor: Colors.black,
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : ListView.builder(
@@ -79,7 +84,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
         itemBuilder: (context, index) {
           final category = categories[index];
           final imageUrl = categoryImages[category['query']!] ??
-              'https://via.placeholder.com/150';  // Default image if loading
+              'https://via.placeholder.com/150';
 
           return Card(
             color: Colors.grey[900],
@@ -103,12 +108,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
                     ),
                   ),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10), // Add rounded corners to the image
+                    borderRadius: BorderRadius.circular(10),
                     child: Image.network(
                       imageUrl,
-                      height: 150,  // Adjust the height of the image here
+                      height: 150,
                       width: double.infinity,
-                      fit: BoxFit.cover,  // Ensures the image fits the container
+                      fit: BoxFit.cover,
                     ),
                   ),
                   SizedBox(height: 10),
@@ -134,7 +139,7 @@ class _WallpaperGridState extends State<WallpaperGrid> {
   List<String> imageUrls = [];
   bool isLoading = true;
   bool hasError = false;
-  final String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';  // Pexels API key
+  final String apiKey = 'nldNE4K8VlngtRXcqSlkaAJ1n9QXtWQq3deB0RoJKM6NpH6GlyN8IIFS';
 
   @override
   void initState() {
@@ -167,6 +172,26 @@ class _WallpaperGridState extends State<WallpaperGrid> {
     }
   }
 
+  Future<void> downloadImage(String url) async {
+    if (await Permission.storage.request().isGranted) {
+      try {
+        var response = await http.get(Uri.parse(url));
+        var dir = await getExternalStorageDirectory();
+        File file = File('${dir?.path}/${url.split('/').last}');
+
+        await file.writeAsBytes(response.bodyBytes);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Downloaded to ${file.path}')),
+        );
+      } catch (e) {
+        print(e);
+      }
+    } else {
+      print('Storage permission denied');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -188,19 +213,31 @@ class _WallpaperGridState extends State<WallpaperGrid> {
         padding: const EdgeInsets.all(8.0),
         child: GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, // 2 images per row
-            crossAxisSpacing: 10, // Horizontal spacing between images
-            mainAxisSpacing: 10,  // Vertical spacing between images
-            childAspectRatio: 0.75, // Adjust this to control image height
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 0.75,
           ),
           itemCount: imageUrls.length,
           itemBuilder: (context, index) {
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(10), // Rounded corners
-              child: Image.network(
-                imageUrls[index],
-                fit: BoxFit.cover,  // Ensures the image fits within the container
-              ),
+            return Column(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      imageUrls[index],
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.download, color: Colors.white),
+                  onPressed: () {
+                    downloadImage(imageUrls[index]);
+                  },
+                ),
+              ],
             );
           },
         ),

@@ -37,6 +37,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^0.13.4 # For making API calls
   carousel_slider: ^5.0.0 # For image carousels
+  path_provider: ^2.0.12
+  dio: ^5.0.0
+  permission_handler: ^10.2.0
 
 
 
